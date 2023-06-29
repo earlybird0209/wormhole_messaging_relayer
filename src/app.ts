@@ -15,7 +15,8 @@ const algoSigner = getAlgoSigner();
 const algorand = new Algorand(conn);
 const polyProvider = getPolyConnection("maticmum")
 const polySigner = getPolySigner(polyProvider);
-const ourAppId = "234234234";
+const algorandAppId = "252600281";
+const polygonContract = "0xeedb7Ba0cBB7315c4304cc5A76AC341038f5c827";
 
 
 const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
@@ -23,13 +24,15 @@ const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
   const hash = ctx.sourceTxHash;
   let seq = ctx.vaa!.sequence.toString();
   const toChain = vaa.payload.readUInt16BE(0);
-  if(toChain == CHAIN_ID_ALGORAND){
+  console.info(vaa);
+  //from polygon to algorand
+  if(vaa.emitterAddress.toString("hex") == "000000000000000000000000eedb7ba0cbb7315c4304cc5a76ac341038f5c827"){
     
     let txns: TransactionSignerPair[] = [];
-    // const submitState =await submitVAAHeader(conn, BigInt(ALGORAND_BRIDGE_ID), new Uint8Array(ctx.vaaBytes), algoSigner.getAddress(), BigInt(ourAppId))
+    // const submitState =await submitVAAHeader(conn, BigInt(ALGORAND_BRIDGE_ID), new Uint8Array(ctx.vaaBytes), algoSigner.getAddress(), BigInt(algorandAppId))
     // txns.push(...(submitState.txs));
-    console.info("message to algorand received", vaa);
-    const senderAddress = vaa.payload.subarray(2, 22);
+    console.info("message to algorand received");
+    const senderAddress = vaa.payload.subarray(0, 32);
     const params = await conn
       .getTransactionParams()
       .do();
@@ -38,15 +41,15 @@ const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
       tx: algosdk.makeApplicationCallTxnFromObject({
           from: algoSigner.getAddress(),
           suggestedParams: params,
-          appIndex: parseInt(ourAppId),
+          appIndex: parseInt(algorandAppId),
           appArgs: [
             m.getSelector(),
             (m.args[0].type as algosdk.ABIType).encode(new Uint8Array(ctx.vaaBytes))
           ],
           onComplete: algosdk.OnApplicationComplete.NoOpOC,
           boxes: [{
-            appIndex: parseInt(ourAppId),
-            name: senderAddress
+            appIndex: parseInt(algorandAppId),
+            name: new Uint8Array(senderAddress)
           }]
         }),
       signer: null
@@ -60,6 +63,7 @@ const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
   if(toChain == CHAIN_ID_POLYGON){
     
   }
+  return next();
 }
 
 async function main() {
@@ -69,10 +73,10 @@ async function main() {
 
   app
     .chain(CHAIN_ID_POLYGON)
-    .address(POLYGON_BRIDGE_ID, myMiddleware);
-  app
-    .chain(CHAIN_ID_ALGORAND)
-    .address(ALGORAND_BRIDGE_ID, myMiddleware);
+    .address(polygonContract, myMiddleware);
+  // app
+  //   .chain(CHAIN_ID_ALGORAND)
+  //   .address(ALGORAND_BRIDGE_ID, myMiddleware);
 
 
   app.listen();

@@ -4,6 +4,7 @@
   "description": "",
   "scripts": {
     "start": "ts-node src/app.ts",
+    "getlsa": "ts-node src/get_logicsig.ts",
     "build": "tsc",
     "watch": "tsc --watch",
     "redis": "docker run --rm -p 6379:6379 --name redis-docker -d redis",

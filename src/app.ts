@@ -2,7 +2,7 @@ import { CHAINS, CHAIN_ID_ALGORAND, CHAIN_ID_POLYGON, TokenBridgePayload, ethers
 import { StandardRelayerApp, StandardRelayerContext, Environment } from "../relayer";
 import {  ALGORAND_BRIDGE_ID, ALGORAND_TOKEN_BRIDGE_ID, POLYGON_BRIDGE_ID, POLYGON_TOKEN_BRIDGE_ID, getAlgoConnection, getAlgoSigner, getPolyConnection, getPolySigner } from "./const";
 import { Algorand } from "./algorand";
-import { TransactionSignerPair, submitVAAHeader } from "@certusone/wormhole-sdk/lib/cjs/algorand";
+import { TransactionSignerPair, calcLogicSigAccount, submitVAAHeader } from "@certusone/wormhole-sdk/lib/cjs/algorand";
 import algosdk, {
   Algodv2,
   bigIntToBytes,
@@ -15,7 +15,7 @@ const algoSigner = getAlgoSigner();
 const algorand = new Algorand(conn);
 const polyProvider = getPolyConnection("maticmum")
 const polySigner = getPolySigner(polyProvider);
-const algorandAppId = "252600281";
+const algorandAppId = "253500909";
 const polygonContract = "0xeedb7Ba0cBB7315c4304cc5A76AC341038f5c827";
 
 
@@ -23,8 +23,8 @@ const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
   const vaa = ctx.vaa;
   const hash = ctx.sourceTxHash;
   let seq = ctx.vaa!.sequence.toString();
-  const toChain = vaa.payload.readUInt16BE(0);
   console.info(vaa);
+  console.info(vaa.payload.toString("hex"))
   //from polygon to algorand
   if(vaa.emitterAddress.toString("hex") == "000000000000000000000000eedb7ba0cbb7315c4304cc5a76ac341038f5c827"){
     
@@ -60,8 +60,7 @@ const myMiddleware = async (ctx: StandardRelayerContext, next: any) => {
 
     return next();
   }
-  if(toChain == CHAIN_ID_POLYGON){
-    
+  if(vaa.emitterChain == CHAIN_ID_ALGORAND){
   }
   return next();
 }
@@ -71,12 +70,12 @@ async function main() {
     name: "CCTRelayer",
   });
 
-  app
-    .chain(CHAIN_ID_POLYGON)
-    .address(polygonContract, myMiddleware);
   // app
-  //   .chain(CHAIN_ID_ALGORAND)
-  //   .address(ALGORAND_BRIDGE_ID, myMiddleware);
+  //   .chain(CHAIN_ID_POLYGON)
+  //   .address(polygonContract, myMiddleware);
+  app
+    .chain(CHAIN_ID_ALGORAND)
+    .address(algorandAppId, myMiddleware);
 
 
   app.listen();
